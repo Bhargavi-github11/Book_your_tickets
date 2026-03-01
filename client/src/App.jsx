@@ -19,6 +19,8 @@ import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
 import Payment from './pages/Payment'
 import NotFound from './pages/NotFound'
+import Theaters from './pages/Theaters'
+import Releases from './pages/Releases'
 const App = () => {
   useEffect(() => {
     const lenis = new Lenis({
@@ -52,6 +54,8 @@ const App = () => {
     <Routes>
       <Route path='/' element={<Home/>} />
       <Route path='/movies' element={<Movies/>} />
+      <Route path='/theaters' element={<Theaters/>} />
+      <Route path='/releases' element={<Releases/>} />
       <Route path='/movies/:id' element={<MovieDetails/>} />
       <Route path='/movies/:id/:date' element={<SeatLayout/>} />
       <Route path='/my-bookings' element={<MyBookings/>} />

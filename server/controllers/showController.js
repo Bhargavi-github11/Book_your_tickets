@@ -37,6 +37,84 @@ const fetchNowPlayingFromTmdb = async (page = 1) => {
     };
 }
 
+const fetchPopularFromTmdb = async (page = 1) => {
+    const { data } = await axios.get('https://api.themoviedb.org/3/movie/popular', {
+        headers: tmdbHeaders(),
+        params: { page },
+    })
+    return {
+        movies: data.results || [],
+        page: Number(data.page || page),
+        totalPages: Number(data.total_pages || 1),
+    };
+}
+
+const fetchUpcomingFromTmdb = async (page = 1) => {
+    const { data } = await axios.get('https://api.themoviedb.org/3/movie/upcoming', {
+        headers: tmdbHeaders(),
+        params: { page },
+    })
+    return {
+        movies: data.results || [],
+        page: Number(data.page || page),
+        totalPages: Number(data.total_pages || 1),
+    };
+}
+
+const fetchDiscoverFromTmdb = async ({ page = 1, genre, language, year, mode }) => {
+    const today = new Date().toISOString().slice(0, 10)
+    const params = {
+        page,
+        include_adult: false,
+        include_video: false,
+        sort_by: 'popularity.desc',
+    }
+
+    if (genre) params.with_genres = genre
+    if (language) params.with_original_language = language
+    if (year) params.primary_release_year = year
+
+    if (mode === 'theaters') {
+        params['release_date.lte'] = today
+        params['with_release_type'] = '2|3'
+    }
+
+    if (mode === 'releases') {
+        params['release_date.gte'] = today
+    }
+
+    const { data } = await axios.get('https://api.themoviedb.org/3/discover/movie', {
+        headers: tmdbHeaders(),
+        params,
+    })
+
+    return {
+        movies: data.results || [],
+        page: Number(data.page || page),
+        totalPages: Number(data.total_pages || 1),
+    }
+}
+
+const isFilterRequested = (query = {}) => {
+    const { genre, language, year } = query
+    return Boolean(genre || language || year)
+}
+
+const sendTmdbListResponse = async (req, res, fetcher, keyName) => {
+    const requestedPage = Number(req.query.page || 1);
+    const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
+    const { movies, page, totalPages } = await fetcher(safePage);
+    const enrichedMovies = await enrichMovies(movies);
+
+    return res.json({
+        success: true,
+        [keyName]: enrichedMovies,
+        page,
+        totalPages,
+        hasNextPage: page < totalPages,
+    })
+}
+
 const fetchMovieDetails = async (movieId) => {
     try {
         const { data } = await axios.get(`https://api.themoviedb.org/3/movie/${movieId}`, {
@@ -80,17 +158,7 @@ const enrichMovies = async (movies) => {
 
 export const getNowPlayingMovies = async (req, res)=>{
     try {
-        const requestedPage = Number(req.query.page || 1);
-        const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-        const { movies, page, totalPages } = await fetchNowPlayingFromTmdb(safePage);
-        const enrichedMovies = await enrichMovies(movies);
-        res.json({
-            success: true,
-            movies: enrichedMovies,
-            page,
-            totalPages,
-            hasNextPage: page < totalPages,
-        })
+        await sendTmdbListResponse(req, res, fetchNowPlayingFromTmdb, "movies")
     } catch (error) {
         console.error(error);
         res.json({success: false, message: error.message})
@@ -100,17 +168,65 @@ export const getNowPlayingMovies = async (req, res)=>{
 
 export const getAllShows = async (req, res) => {
     try {
-        const requestedPage = Number(req.query.page || 1);
-        const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1;
-        const { movies, page, totalPages } = await fetchNowPlayingFromTmdb(safePage);
-        const enrichedMovies = await enrichMovies(movies);
-        res.json({
-            success: true,
-            shows: enrichedMovies,
-            page,
-            totalPages,
-            hasNextPage: page < totalPages,
-        })
+        await sendTmdbListResponse(req, res, fetchPopularFromTmdb, "shows")
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, message: error.message })
+    }
+}
+
+export const getTheaterMovies = async (req, res) => {
+    try {
+        if (isFilterRequested(req.query)) {
+            const requestedPage = Number(req.query.page || 1)
+            const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
+            const { movies, page, totalPages } = await fetchDiscoverFromTmdb({
+                page: safePage,
+                genre: req.query.genre,
+                language: req.query.language,
+                year: req.query.year,
+                mode: 'theaters',
+            })
+            const enrichedMovies = await enrichMovies(movies)
+            return res.json({
+                success: true,
+                movies: enrichedMovies,
+                page,
+                totalPages,
+                hasNextPage: page < totalPages,
+            })
+        }
+
+        await sendTmdbListResponse(req, res, fetchNowPlayingFromTmdb, "movies")
+    } catch (error) {
+        console.error(error);
+        res.json({ success: false, message: error.message })
+    }
+}
+
+export const getReleaseMovies = async (req, res) => {
+    try {
+        if (isFilterRequested(req.query)) {
+            const requestedPage = Number(req.query.page || 1)
+            const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
+            const { movies, page, totalPages } = await fetchDiscoverFromTmdb({
+                page: safePage,
+                genre: req.query.genre,
+                language: req.query.language,
+                year: req.query.year,
+                mode: 'releases',
+            })
+            const enrichedMovies = await enrichMovies(movies)
+            return res.json({
+                success: true,
+                movies: enrichedMovies,
+                page,
+                totalPages,
+                hasNextPage: page < totalPages,
+            })
+        }
+
+        await sendTmdbListResponse(req, res, fetchUpcomingFromTmdb, "movies")
     } catch (error) {
         console.error(error);
         res.json({ success: false, message: error.message })

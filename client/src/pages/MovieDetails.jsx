@@ -5,6 +5,7 @@ import timeFormat from '../lib/timeFormat'
 import BlurCircle from '../components/BlurCircle'
 import DateSelection from '../components/DateSelection'
 import MoviesCard from '../components/MoviesCard'
+import localDateKey from '../lib/localDateKey'
 import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
 
@@ -51,7 +52,7 @@ const buildDateTimeData = () => {
     const date = new Date(today);
     date.setDate(today.getDate() + dayOffset);
 
-    const dateKey = date.toISOString().slice(0, 10);
+    const dateKey = localDateKey(date);
 
     result[dateKey] = slots.map((time, index) => {
       const [hours, minutes] = time.split(":");

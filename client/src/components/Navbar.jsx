@@ -20,7 +20,7 @@ const Navbar = () => {
         md:px-8 py-3 max-md:h-screen md:rounded-full backdrop-blur 
         bg-black/70 md:bg-white/10 md:border border-gray-300/20 
         overflow-hidden transition-[width] duration-300 ${
-        isOpen ? "max-md: w-full" : "max-md:w-0"
+        isOpen ? "max-md:w-full" : "max-md:w-0"
       }`}
       >
         <XIcon
@@ -51,7 +51,7 @@ const Navbar = () => {
             scrollTo(0, 0);
             setIsOpen(false);
           }}
-          to="/"
+          to="/theaters"
         >
           Theaters
         </Link>
@@ -60,7 +60,7 @@ const Navbar = () => {
             scrollTo(0, 0);
             setIsOpen(false);
           }}
-          to="/"
+          to="/releases"
         >
           Releases
         </Link>

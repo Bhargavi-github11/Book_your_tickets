@@ -79,6 +79,13 @@ export const createBooking = async (req, res) => {
       return res.json({ success: false, message: "Please select at least one seat" });
     }
 
+    const normalizedSeats = [...new Set(selectedSeats.map((seat) => String(seat).trim().toUpperCase()))]
+      .filter(Boolean);
+
+    if (normalizedSeats.length === 0) {
+      return res.json({ success: false, message: "Please select valid seats" });
+    }
+
     const userId = req.user.id;
 
     let finalShowId = showId;
@@ -104,43 +111,77 @@ export const createBooking = async (req, res) => {
       }
 
       const dateTime = new Date(showDateTime);
-      showData = await Show.findOne({
-        movie: normalizedMovieId,
-        showDateTime: dateTime,
-      });
-
-      if (!showData) {
-        showData = await Show.create({
+      showData = await Show.findOneAndUpdate(
+        {
           movie: normalizedMovieId,
           showDateTime: dateTime,
-          showPrice: Number(showPrice || 200),
-          occupiedSeats: {},
-        });
-      }
+        },
+        {
+          $setOnInsert: {
+            movie: normalizedMovieId,
+            showDateTime: dateTime,
+            showPrice: Number(showPrice || 200),
+            occupiedSeats: {},
+          },
+        },
+        {
+          upsert: true,
+          new: true,
+          setDefaultsOnInsert: true,
+        }
+      );
 
       finalShowId = String(showData._id);
     }
 
-    const { available, showData: resolvedShow } = await checkSeatsAvailability(finalShowId, selectedSeats);
+    const seatAvailabilityConditions = normalizedSeats.reduce((acc, seat) => {
+      acc[`occupiedSeats.${seat}`] = { $exists: false };
+      return acc;
+    }, {});
 
-    if (!available || !resolvedShow) {
+    const seatReservationUpdate = normalizedSeats.reduce((acc, seat) => {
+      acc[`occupiedSeats.${seat}`] = userId;
+      return acc;
+    }, {});
+
+    const reservedShow = await Show.findOneAndUpdate(
+      {
+        _id: finalShowId,
+        ...seatAvailabilityConditions,
+      },
+      {
+        $set: seatReservationUpdate,
+      },
+      {
+        new: true,
+      }
+    );
+
+    if (!reservedShow) {
       return res.json({ success: false, message: "Selected seats are not available" });
     }
 
-    const booking = await Booking.create({
-      user: userId,
-      show: finalShowId,
-      amount: resolvedShow.showPrice * selectedSeats.length,
-      bookedSeats: selectedSeats,
-      isPaid: false,
-    });
+    let booking;
+    try {
+      booking = await Booking.create({
+        user: userId,
+        show: finalShowId,
+        amount: reservedShow.showPrice * normalizedSeats.length,
+        bookedSeats: normalizedSeats,
+        isPaid: false,
+      });
+    } catch (creationError) {
+      const rollbackUpdate = normalizedSeats.reduce((acc, seat) => {
+        acc[`occupiedSeats.${seat}`] = "";
+        return acc;
+      }, {});
 
-    selectedSeats.forEach((seat) => {
-      resolvedShow.occupiedSeats[seat] = userId;
-    });
+      await Show.findByIdAndUpdate(finalShowId, {
+        $unset: rollbackUpdate,
+      });
 
-    resolvedShow.markModified("occupiedSeats");
-    await resolvedShow.save();
+      throw creationError;
+    }
 
     res.json({
       success: true,
@@ -344,6 +385,30 @@ export const getOccupiedSeats = async (req, res) => {
 
     const occupiedSeats = Object.keys(showData.occupiedSeats || {});
     res.json({ success: true, occupiedSeats });
+  } catch (error) {
+    res.json({ success: false, message: error.message });
+  }
+};
+
+export const getOccupiedSeatsBySlot = async (req, res) => {
+  try {
+    const { movieId, showDateTime } = req.query || {};
+
+    if (!movieId || !showDateTime) {
+      return res.json({ success: false, message: "movieId and showDateTime are required" });
+    }
+
+    const show = await Show.findOne({
+      movie: String(movieId),
+      showDateTime: new Date(showDateTime),
+    }).select("_id occupiedSeats");
+
+    if (!show) {
+      return res.json({ success: true, showId: null, occupiedSeats: [] });
+    }
+
+    const occupiedSeats = Object.keys(show.occupiedSeats || {});
+    return res.json({ success: true, showId: String(show._id), occupiedSeats });
   } catch (error) {
     res.json({ success: false, message: error.message });
   }
