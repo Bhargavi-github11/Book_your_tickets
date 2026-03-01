@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { assets } from "../assets/assets";
 import { MenuIcon, SearchIcon, TicketPlus, XIcon } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
 
@@ -12,7 +11,7 @@ const Navbar = () => {
   return (
     <div className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5">
       <Link to="/" className="max-md:flex-1">
-        <img src={assets.logo} alt="" className="w-36 h-auto" />
+        <p className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Frame<span className="text-primary">Flix</span></p>
       </Link>
 
       <div
@@ -90,7 +89,7 @@ const Navbar = () => {
           <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => navigate("/my-bookings")}
-              className="hidden md:inline-flex items-center gap-1 px-4 py-2 text-xs bg-primary/80 hover:bg-primary rounded-full font-medium"
+              className="hidden md:inline-flex items-center gap-1 px-4 py-2 text-xs bg-primary/80 hover:bg-primary rounded-full font-medium cursor-pointer"
             >
               <TicketPlus width={14} /> My Bookings
             </button>
@@ -99,7 +98,7 @@ const Navbar = () => {
             </div>
             <button
               onClick={logoutUser}
-              className="px-3 py-1.5 text-xs border border-gray-500 rounded-full hover:bg-white/10"
+              className="px-3 py-1.5 text-xs border border-gray-500 rounded-full hover:bg-white/10 cursor-pointer"
             >
               Logout
             </button>

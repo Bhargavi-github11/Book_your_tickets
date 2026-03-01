@@ -167,7 +167,7 @@ const AddShows = () => {
           />
          <button
   onClick={handleDateTimeAdd}
-  className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary"
+          className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer"
 >
   Add Time
 </button>

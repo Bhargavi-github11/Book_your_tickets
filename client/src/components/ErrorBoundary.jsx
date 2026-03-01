@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
             <div className="mt-6 flex justify-center gap-3">
               <button
                 onClick={() => window.location.reload()}
-                className="px-5 py-2 rounded-md bg-primary hover:bg-primary-dull"
+                className="px-5 py-2 rounded-md bg-primary hover:bg-primary-dull cursor-pointer"
               >
                 Reload
               </button>
@@ -32,7 +32,7 @@ class ErrorBoundary extends React.Component {
                 onClick={() => {
                   window.location.href = "/";
                 }}
-                className="px-5 py-2 rounded-md border border-primary/40"
+                className="px-5 py-2 rounded-md border border-primary/40 cursor-pointer"
               >
                 Go Home
               </button>

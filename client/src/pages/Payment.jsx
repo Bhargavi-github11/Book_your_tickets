@@ -165,7 +165,7 @@ const Payment = () => {
           <button
             onClick={onCompletePayment}
             disabled={loading || verifying || booking?.isPaid}
-            className="mt-6 w-full py-3 rounded-lg bg-primary hover:bg-primary-dull transition disabled:opacity-60 font-medium"
+            className="mt-6 w-full py-3 rounded-lg bg-primary hover:bg-primary-dull transition cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed font-medium"
           >
             {booking?.isPaid ? "Already Paid" : loading || verifying ? "Processing..." : "Pay with Stripe"}
           </button>

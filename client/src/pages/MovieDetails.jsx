@@ -145,7 +145,7 @@ const MovieDetails = () => {
     return (
       <div className='flex flex-col items-center justify-center h-screen px-6'>
         <h1 className='text-2xl font-semibold text-center'>Movie not found</h1>
-        <button onClick={() => navigate('/movies')} className='mt-4 px-6 py-2 rounded-md bg-primary'>Back to Movies</button>
+        <button onClick={() => navigate('/movies')} className='mt-4 px-6 py-2 rounded-md bg-primary cursor-pointer'>Back to Movies</button>
       </div>
     )
   }
@@ -188,12 +188,12 @@ const MovieDetails = () => {
           </p>
 
           <div className="flex gap-4 mt-4">
-            <button onClick={handleWatchTrailer} disabled={trailerLoading} className="flex items-center gap-2 px-6 py-3 bg-gray-800 rounded-md disabled:opacity-60">
+            <button onClick={handleWatchTrailer} disabled={trailerLoading} className="flex items-center gap-2 px-6 py-3 bg-gray-800 rounded-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
               <PlayCircle className="w-5 h-5" />
               {trailerLoading ? 'Loading...' : 'Watch Trailer'}
             </button>
 
-            <button onClick={onBuyTickets} className="px-8 py-3 bg-primary rounded-md">
+            <button onClick={onBuyTickets} className="px-8 py-3 bg-primary rounded-md cursor-pointer">
               Buy Tickets
             </button>
 
@@ -237,7 +237,7 @@ const MovieDetails = () => {
           <div className='w-full max-w-4xl bg-black rounded-xl overflow-hidden border border-primary/30'>
             <div className='flex items-center justify-between px-4 py-3 bg-primary/10'>
               <p className='font-medium'>{movie.title} Trailer</p>
-              <button onClick={() => setIsTrailerOpen(false)} className='p-1 rounded hover:bg-white/10'>
+              <button onClick={() => setIsTrailerOpen(false)} className='p-1 rounded hover:bg-white/10 cursor-pointer'>
                 <XIcon className='w-5 h-5' />
               </button>
             </div>

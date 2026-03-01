@@ -52,13 +52,20 @@ const Movies = () => {
       <div className='relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]'>
         <BlurCircle top='150px' left='0px' />
         <BlurCircle bottom='50px' right='50px' />
-        <div className='shimmer h-7 w-44 rounded mb-7'></div>
+        <div className='shimmer-premium h-7 w-44 rounded-md mb-7'></div>
         <div className='flex flex-wrap max-sm:justify-center gap-8'>
           {Array.from({ length: 8 }).map((_, index) => (
-            <div key={index} className='w-[220px] rounded-xl border border-primary/20 bg-primary/5 p-3'>
-              <div className='shimmer h-72 rounded-lg'></div>
-              <div className='shimmer h-4 w-3/4 mt-4 rounded'></div>
-              <div className='shimmer h-3 w-1/2 mt-3 rounded'></div>
+            <div key={index} className='flex flex-col justify-between p-3 bg-gray-800 rounded-2xl w-66 border border-primary/15'>
+              <div>
+                <div className='shimmer-premium rounded-lg h-52 w-full'></div>
+                <div className='shimmer-premium h-5 w-4/5 mt-3 rounded'></div>
+                <div className='shimmer-premium h-3.5 w-full mt-3 rounded'></div>
+              </div>
+
+              <div className='flex items-center justify-between mt-4 pb-3'>
+                <div className='shimmer-premium h-8 w-24 rounded-full'></div>
+                <div className='shimmer-premium h-4 w-12 rounded'></div>
+              </div>
             </div>
           ))}
         </div>
@@ -81,7 +88,7 @@ const Movies = () => {
         <button
           onClick={onPrev}
           disabled={currentPage === 1 || loading}
-          className='px-5 py-2 rounded-md border border-primary/30 disabled:opacity-40'
+          className='px-5 py-2 rounded-md border border-primary/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
         >
           Previous
         </button>
@@ -89,7 +96,7 @@ const Movies = () => {
         <button
           onClick={onNext}
           disabled={currentPage >= totalPages || loading}
-          className='px-5 py-2 rounded-md bg-primary hover:bg-primary-dull disabled:opacity-40'
+          className='px-5 py-2 rounded-md bg-primary hover:bg-primary-dull cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
         >
           Next
         </button>

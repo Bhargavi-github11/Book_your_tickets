@@ -1,6 +1,7 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import Navbar from './components/Navbar'
 import { Route, Routes, useLocation } from 'react-router-dom'
+import Lenis from 'lenis'
 import Home from './pages/Home'
 import Movies from './pages/Movies'
 import MovieDetails from './pages/MovieDetails'
@@ -19,6 +20,29 @@ import SignUp from './pages/SignUp'
 import Payment from './pages/Payment'
 import NotFound from './pages/NotFound'
 const App = () => {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.5,
+      smoothWheel: true,
+      wheelMultiplier: 0.85,
+      touchMultiplier: 1.1,
+      syncTouch: true,
+      easing: (t) => 1 - Math.pow(1 - t, 3),
+    })
+
+    let animationFrameId = 0
+    const raf = (time) => {
+      lenis.raf(time)
+      animationFrameId = requestAnimationFrame(raf)
+    }
+
+    animationFrameId = requestAnimationFrame(raf)
+
+    return () => {
+      cancelAnimationFrame(animationFrameId)
+      lenis.destroy()
+    }
+  }, [])
 
   const isAdminRoute = useLocation().pathname.startsWith('/admin')
   return (
