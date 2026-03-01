@@ -1,11 +1,26 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { assets, dummyDateTimeData, dummyShowsData } from '../assets/assets'
+import { assets } from '../assets/assets'
 import Loding from '../components/Loding'
 import { ArrowRightIcon, ClockIcon } from 'lucide-react'
 import isoTimeFormat from '../lib/isoTimeFormat'
 import BlurCircle from '../components/BlurCircle'
 import toast from 'react-hot-toast'
+import { useAppContext } from '../context/AppContext'
+
+const buildDateTimeData = () => {
+  const slots = ["10:00", "13:00", "16:00", "19:00"];
+  return slots.map((time, index) => {
+    const [hours, minutes] = time.split(":");
+    const date = new Date();
+    date.setHours(Number(hours), Number(minutes), 0, 0);
+    return {
+      time: date.toISOString(),
+      showId: `slot-${index}`,
+    };
+  });
+};
+
 const SeatLayout = () => {
 
   const groupRows = [['A', 'B'],['C', 'D'],['E', 'F'],['G', 'H'],['I', 'J']]
@@ -13,15 +28,20 @@ const SeatLayout = () => {
   const [selectedSeats, setSelectedSeats] = useState([])
   const [selectedTime, setSelectedTime] = useState(null)
   const [show, setShow] = useState(null);
+  const [bookingLoading, setBookingLoading] = useState(false)
+
+  const { axios, shows, authToken } = useAppContext()
 
   const navigate = useNavigate()
 
   const getShow = async () =>{
-    const show = dummyShowsData.find(show => show.id === Number(id))
-    if(show){
+    const selectedMovie = shows.find((item) => String(item._id) === String(id))
+    if(selectedMovie){
       setShow({
-        movie: show,
-        dateTime: dummyDateTimeData
+        movie: selectedMovie,
+        dateTime: {
+          [date]: buildDateTimeData(),
+        }
       })
     }
   }
@@ -51,7 +71,51 @@ const SeatLayout = () => {
   )
   useEffect(()=>{
     getShow()
-  },[id])
+  },[id, date, shows])
+
+  const onProceedToPayment = async () => {
+    if (!authToken) {
+      toast.error('Please sign in first')
+      navigate('/signin', { state: { from: `/movies/${id}/${date}` } })
+      return
+    }
+
+    if (!selectedTime) {
+      toast.error('Please select time first')
+      return
+    }
+
+    if (selectedSeats.length === 0) {
+      toast.error('Please select at least one seat')
+      return
+    }
+
+    try {
+      setBookingLoading(true)
+
+      const { data } = await axios.post('/api/booking/create', {
+        movieId: show.movie._id,
+        movieData: show.movie,
+        showDateTime: selectedTime.time,
+        showPrice: 200,
+        selectedSeats,
+      }, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
+
+      if (data.success) {
+        navigate(`/payment/${data.bookingId}`)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message)
+    } finally {
+      setBookingLoading(false)
+    }
+  }
   return show ? (
     <div className='flex flex-col md:flex-row px-6 md:px-16 lg:px-40 py-30 md:pt-50'>
       {/* Available Timings */}
@@ -85,9 +149,9 @@ const SeatLayout = () => {
           ))}
          </div>
          </div>
-         <button onClick={()=> navigate('/my-bookings')} className='flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95'>
+         <button onClick={onProceedToPayment} disabled={bookingLoading} className='flex items-center gap-1 mt-20 px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer active:scale-95 disabled:opacity-60'>
           Proceed to Checkout
-          <ArrowRightIcon strokewidth={3} className='w-4 h-4' />
+          <ArrowRightIcon strokeWidth={3} className='w-4 h-4' />
          </button>
       </div>
     </div>

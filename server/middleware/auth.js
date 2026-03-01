@@ -1,35 +1,51 @@
-import { clerkClient, getAuth } from "@clerk/express";
+import jwt from "jsonwebtoken";
 import User from "../models/User.js";
+
+export const protectAuth = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.split(" ")[1]
+      : null;
+
+    if (!token) {
+      return res.json({ success: false, message: "not authenticated" });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.id).lean();
+
+    if (!user) {
+      return res.json({ success: false, message: "user not found" });
+    }
+
+    req.user = {
+      id: String(user._id),
+      email: user.email,
+      role: user.role,
+      name: user.name,
+    };
+
+    next();
+  } catch (error) {
+    return res.json({ success: false, message: "invalid token" });
+  }
+};
 
 export const protectAdmin = async (req, res, next) => {
   try {
-    const { userId } = getAuth(req);
-    if (!userId) {
+    if (!req.user?.id) {
       return res.json({ success: false, message: "not authorized" });
     }
 
-    const user = await clerkClient.users.getUser(userId);
-    const dbUser = await User.findById(userId).lean();
+    const user = await User.findById(req.user.id).lean();
 
-    const privateMeta = user?.privateMetadata || {};
-    const publicMeta = user?.publicMetadata || {};
-    const unsafeMeta = user?.unsafeMetadata || {};
-
-    const hasPrivateAdmin =
-      privateMeta.role === "admin" || privateMeta.isAdmin === true;
-    const hasPublicAdmin =
-      publicMeta.role === "admin" || publicMeta.isAdmin === true;
-    const hasUnsafeAdmin =
-      unsafeMeta.role === "admin" || unsafeMeta.isAdmin === true;
-    const hasDbAdmin = dbUser?.role === "admin";
-
-    if (!hasPrivateAdmin && !hasPublicAdmin && !hasUnsafeAdmin && !hasDbAdmin) {
+    if (!user || user.role !== "admin") {
       return res.json({ success: false, message: "not authorized" });
     }
 
     next();
   } catch (error) {
-    console.error("protectAdmin error:", error);
     return res.json({ success: false, message: "not authorized" });
   }
 };

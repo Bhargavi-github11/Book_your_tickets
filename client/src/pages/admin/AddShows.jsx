@@ -1,20 +1,96 @@
 import React, { useEffect, useState } from 'react'
-import { dummyShowsData } from '../../assets/assets'
 import Loding from '../../components/Loding'
 import Title from '../../components/admin/Title'
 import { CheckIcon, DeleteIcon, StarIcon } from 'lucide-react'
 import { kConverter } from '../../lib/kConverter'
+import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 const AddShows = () => {
   const currency = import.meta.env.VITE_CURRENCY
+  const { axios, authToken, navigate } = useAppContext()
   const [nowPlayingmovies, setNowPlayingMovies] = useState([])
   const [selectedMovie, setSelectedmovie] = useState(null)
   const [dateTimeSelection, setDateTimeSelection] = useState({})
   const [dateTimeInput, setDateTimeInput] = useState('')
   const [showPrice, setShowPrice] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const fecthNowPlayingMovies = async () =>{
-    setNowPlayingMovies(dummyShowsData)
+    try {
+      const { data } = await axios.get('/api/show/now-playing')
+      if (data.success) {
+        setNowPlayingMovies(Array.isArray(data.movies) ? data.movies : [])
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message)
+    }
   }
+
+  const onAddShow = async () => {
+    if (!authToken) {
+      navigate('/signin', { state: { from: '/admin/add-shows' } })
+      return
+    }
+
+    const selectedMovieData = nowPlayingmovies.find((movie) => String(movie.id) === String(selectedMovie))
+    if (!selectedMovieData) {
+      toast.error('Please select a movie')
+      return
+    }
+
+    const price = Number(showPrice)
+    if (!Number.isFinite(price) || price <= 0) {
+      toast.error('Please enter valid show price')
+      return
+    }
+
+    const showDateTimes = Object.entries(dateTimeSelection).flatMap(([date, times]) =>
+      times.map((time) => new Date(`${date}T${time}`).toISOString())
+    )
+
+    if (showDateTimes.length === 0) {
+      toast.error('Please add at least one date and time')
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+      const { data } = await axios.post(
+        '/api/admin/create-shows',
+        {
+          movieId: String(selectedMovieData.id),
+          movieData: selectedMovieData,
+          showPrice: price,
+          showDateTimes,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+          },
+        }
+      )
+
+      if (data.success) {
+        toast.success(data.message || 'Shows added successfully')
+        setDateTimeSelection({})
+        setDateTimeInput('')
+        setShowPrice('')
+        navigate('/admin/list-shows')
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        navigate('/')
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   const handleDateTimeAdd = () => {
     if(!dateTimeInput) return;
     const [date, time] = dateTimeInput.split('T');
@@ -59,13 +135,13 @@ const AddShows = () => {
                 <StarIcon className='w-4 h-4 text-primary fill-primary' />
                 {movie.vote_average.toFixed(1)}
               </p>
-              <p className='text-gray-300'>{kConverter()} votes</p>
+              <p className='text-gray-300'>{kConverter(movie.vote_count || 0)} votes</p>
 
               </div>
             </div>
             {selectedMovie === movie.id && (
               <div className='absolute top-2 right-2 flex items-center justify-center bg-primary h-6 w-6 rounded'>
-                <CheckIcon className='w-4 h-4 text-white' strokewidth={2.5} />
+                <CheckIcon className='w-4 h-4 text-white' strokeWidth={2.5} />
               </div>
             )}
             <p className='font-medium truncate'>{movie.title}</p>
@@ -119,7 +195,7 @@ const AddShows = () => {
     </div>
 
 )}
-<button className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor-pointer '>Add Show</button>
+<button onClick={onAddShow} disabled={isSubmitting} className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-60'>{isSubmitting ? 'Adding...' : 'Add Show'}</button>
     </>
   ) : <Loding />
 }

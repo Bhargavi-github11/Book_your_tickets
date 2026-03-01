@@ -7,14 +7,16 @@ import {
   UsersIcon,
 } from 'lucide-react'
 
-import { dummyDashboardData } from '../../assets/assets'
 import Loding from '../../components/Loding'
 import Title from '../../components/admin/Title'
 import BlurCircle from '../../components/BlurCircle'
 import {dateFormat }from '../../lib/dateFormat'
+import { useAppContext } from '../../context/AppContext'
+import toast from 'react-hot-toast'
 
 const Dashboard = () => {
   const currency = import.meta.env.VITE_CURRENCY || '₹'
+  const { axios, authToken, navigate } = useAppContext()
 
   const [dashboardData, setDashboardData] = useState({
     totalBookings: 0,
@@ -51,13 +53,36 @@ const Dashboard = () => {
   ]
 
   const fetchDashboardData = async () => {
-    setDashboardData(dummyDashboardData)
-    setLoading(false)
+    if (!authToken) {
+      navigate('/signin', { state: { from: '/admin' } })
+      return
+    }
+
+    try {
+      const { data } = await axios.get('/api/admin/dashboard', {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      })
+
+      if (data.success) {
+        setDashboardData(data.dashboardData)
+      } else {
+        toast.error(data.message)
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message)
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        navigate('/')
+      }
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+  }, [authToken])
 
   if (loading) return <Loding />
 

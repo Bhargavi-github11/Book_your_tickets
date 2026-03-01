@@ -1,14 +1,25 @@
 import React from "react"
 import { useNavigate } from "react-router-dom"
-import {StarIcon} from "lucide-react"
+import {Heart, StarIcon} from "lucide-react"
 import timeFormat from "../lib/timeFormat"
+import { useAppContext } from "../context/AppContext"
 const MoviesCard = ({movie}) => {
   const navigate = useNavigate()
+  const { isFavoriteMovie, updateFavoriteMovie } = useAppContext()
+  const isFavorite = isFavoriteMovie(movie._id)
   return (
     <div className='flex flex-col justify-between p-3  bg-gray-800
     rounded-2xl  hover:-translate-y-1 transition duration-300 w-66'>
-    <img onClick={()=>{navigate(`/movies/${movie._id}`);scrollTo(0,0)}} src= {movie.backdrop_path} alt="" className='rounded-lg h-52 w-full
+    <div className="relative">
+      <img onClick={()=>{navigate(`/movies/${movie._id}`);scrollTo(0,0)}} src= {movie.backdrop_path} alt="" className='rounded-lg h-52 w-full
     object-cover object-right-bottom cursor-pointer'/>
+      <button
+        onClick={() => updateFavoriteMovie(movie)}
+        className="absolute top-2 right-2 bg-black/60 p-2 rounded-full cursor-pointer"
+      >
+        <Heart className={`w-4 h-4 ${isFavorite ? 'fill-primary text-primary' : 'text-white'}`} />
+      </button>
+    </div>
 
     <p className="font-semibold mt-2 truncate">{movie.title}</p>
 

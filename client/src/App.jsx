@@ -14,6 +14,10 @@ import Dashboard from './pages/admin/Dashboard'
 import AddShows from './pages/admin/AddShows'
 import ListShow from './pages/admin/ListShow'
 import ListBooking from './pages/admin/ListBooking'
+import SignIn from './pages/SignIn'
+import SignUp from './pages/SignUp'
+import Payment from './pages/Payment'
+import NotFound from './pages/NotFound'
 const App = () => {
 
   const isAdminRoute = useLocation().pathname.startsWith('/admin')
@@ -27,13 +31,18 @@ const App = () => {
       <Route path='/movies/:id' element={<MovieDetails/>} />
       <Route path='/movies/:id/:date' element={<SeatLayout/>} />
       <Route path='/my-bookings' element={<MyBookings/>} />
+      <Route path='/payment/:bookingId' element={<Payment/>} />
       <Route path='/favorite' element={<Favorite/>} />
+      <Route path='/signin' element={<SignIn/>} />
+      <Route path='/signup' element={<SignUp/>} />
       <Route path='/admin/*' element={<LayOut/>}>
       <Route index element={<Dashboard/>}/>
       <Route path='add-shows' element={<AddShows/>}/>
       <Route path='list-shows' element={<ListShow/>}/>
       <Route path='list-bookings' element={<ListBooking/>}/>
+      <Route path='*' element={<NotFound/>}/>
       </Route>
+      <Route path='*' element={<NotFound/>} />
     </Routes>
     {!isAdminRoute && <Footer/>}
     </>

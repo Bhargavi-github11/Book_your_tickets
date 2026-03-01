@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 import { MenuIcon, SearchIcon, TicketPlus, XIcon } from "lucide-react";
-import { useClerk, UserButton, useUser } from "@clerk/clerk-react";
+import { useAppContext } from "../context/AppContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user } = useUser();
-  const { openSignIn } = useClerk();
+  const { user, logoutUser } = useAppContext();
   const navigate = useNavigate();
+
   return (
     <div className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5">
       <Link to="/" className="max-md:flex-1">
@@ -31,7 +31,8 @@ const Navbar = () => {
 
         <Link
           onClick={() => {
-            scrollTo(0, 0); setIsOpen(false);
+            scrollTo(0, 0);
+            setIsOpen(false);
           }}
           to="/"
         >
@@ -39,7 +40,8 @@ const Navbar = () => {
         </Link>
         <Link
           onClick={() => {
-            scrollTo(0, 0); setIsOpen(false);
+            scrollTo(0, 0);
+            setIsOpen(false);
           }}
           to="/movies"
         >
@@ -47,7 +49,8 @@ const Navbar = () => {
         </Link>
         <Link
           onClick={() => {
-            scrollTo(0, 0); setIsOpen(false);
+            scrollTo(0, 0);
+            setIsOpen(false);
           }}
           to="/"
         >
@@ -55,7 +58,8 @@ const Navbar = () => {
         </Link>
         <Link
           onClick={() => {
-            scrollTo(0, 0); setIsOpen(false);
+            scrollTo(0, 0);
+            setIsOpen(false);
           }}
           to="/"
         >
@@ -63,7 +67,8 @@ const Navbar = () => {
         </Link>
         <Link
           onClick={() => {
-            scrollTo(0, 0); setIsOpen(false);
+            scrollTo(0, 0);
+            setIsOpen(false);
           }}
           to="/favorite"
         >
@@ -71,26 +76,34 @@ const Navbar = () => {
         </Link>
       </div>
 
-      <div className="flex items-center gap-8">
+      <div className="flex items-center gap-3 md:gap-8">
         <SearchIcon className="max-md:hidden w-6 h-6 cursor-pointer" />
+
         {!user ? (
           <button
-            onClick={openSignIn}
-            className="px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull 
-        transition rounded-full font-medium cursor-pointer"
+            onClick={() => navigate("/signin")}
+            className="px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
           >
             Login
           </button>
         ) : (
-          <UserButton>
-            <UserButton.MenuItems>
-              <UserButton.Action
-                label="My Booking"
-                labelIcon={<TicketPlus width={15} />}
-                onClick={() => navigate("/my-bookings")}
-              />
-            </UserButton.MenuItems>
-          </UserButton>
+          <div className="flex items-center gap-2 md:gap-3">
+            <button
+              onClick={() => navigate("/my-bookings")}
+              className="hidden md:inline-flex items-center gap-1 px-4 py-2 text-xs bg-primary/80 hover:bg-primary rounded-full font-medium"
+            >
+              <TicketPlus width={14} /> My Bookings
+            </button>
+            <div className="h-9 w-9 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center font-semibold">
+              {(user.name || user.email || "U")[0]?.toUpperCase()}
+            </div>
+            <button
+              onClick={logoutUser}
+              className="px-3 py-1.5 text-xs border border-gray-500 rounded-full hover:bg-white/10"
+            >
+              Logout
+            </button>
+          </div>
         )}
       </div>
 
@@ -101,4 +114,5 @@ const Navbar = () => {
     </div>
   );
 };
+
 export default Navbar;

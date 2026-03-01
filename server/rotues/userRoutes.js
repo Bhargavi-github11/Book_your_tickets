@@ -1,14 +1,14 @@
 import express from 'express';
-import { requireAuth } from '@clerk/express';
+import { protectAuth } from '../middleware/auth.js';
 import { getFavorites, getUserBookings, updateFavorite, upgradeToAdmin, syncCurrentUser } from '../controllers/userController.js';
 
 
 const userRouter = express.Router();
 
-userRouter.get('/bookings' ,requireAuth(), getUserBookings);
-userRouter.post('/update-favorite',requireAuth(), updateFavorite);
-userRouter.get('/favorites',requireAuth(),getFavorites);
-userRouter.post('/upgrade-admin', requireAuth(), upgradeToAdmin);
-userRouter.get('/sync', requireAuth(), syncCurrentUser);
+userRouter.get('/bookings' ,protectAuth, getUserBookings);
+userRouter.post('/update-favorite',protectAuth, updateFavorite);
+userRouter.get('/favorites',protectAuth,getFavorites);
+userRouter.post('/upgrade-admin', protectAuth, upgradeToAdmin);
+userRouter.get('/sync', protectAuth, syncCurrentUser);
 
 export default userRouter;
