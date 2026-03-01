@@ -9,6 +9,7 @@ import userRoutes from "./rotues/userRoutes.js";
 import adminRoutes from "./rotues/adminRoutes.js";
 import bookingRoutes from "./rotues/bookingRoutes.js";
 import authRoutes from "./rotues/authRoutes.js";
+import { stripeWebhookHandler } from "./controllers/bookingController.js";
 
 
 const app = express();
@@ -17,6 +18,8 @@ const port = 8181;
 await connectDB();
 
 // Middleware
+
+app.post('/api/booking/webhook', express.raw({ type: 'application/json' }), stripeWebhookHandler);
 
 app.use(express.json());
 app.use(cors());

@@ -79,6 +79,15 @@ const MovieDetails = () => {
   const [trailerLoading, setTrailerLoading] = useState(false)
   const { shows, isFavoriteMovie, updateFavoriteMovie, axios } = useAppContext()
 
+  const onBuyTickets = () => {
+    const dateSection = document.getElementById('dateSelect')
+    if (dateSection) {
+      dateSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      return
+    }
+    navigate(`/movies/${id}`)
+  }
+
   const handleWatchTrailer = async () => {
     if (!movie?._id) return
 
@@ -184,7 +193,7 @@ const MovieDetails = () => {
               {trailerLoading ? 'Loading...' : 'Watch Trailer'}
             </button>
 
-            <button className="px-8 py-3 bg-primary rounded-md">
+            <button onClick={onBuyTickets} className="px-8 py-3 bg-primary rounded-md">
               Buy Tickets
             </button>
 

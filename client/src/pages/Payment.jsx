@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAppContext } from "../context/AppContext";
 import Loding from "../components/Loding";
@@ -10,16 +10,17 @@ import { CreditCardIcon, ShieldCheckIcon, TicketIcon } from "lucide-react";
 
 const Payment = () => {
   const { bookingId } = useParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { axios, authToken } = useAppContext();
   const navigate = useNavigate();
   const currency = import.meta.env.VITE_CURRENCY || "₹";
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [booking, setBooking] = useState(null);
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvv, setCvv] = useState("");
+  const [verifying, setVerifying] = useState(false);
+
+  const sessionId = searchParams.get("session_id");
+  const canceled = searchParams.get("canceled");
 
   const fetchBooking = async () => {
     if (!authToken) {
@@ -52,23 +53,20 @@ const Payment = () => {
     fetchBooking();
   }, [authToken, bookingId]);
 
-  const onCompletePayment = async () => {
-    if (!authToken) {
-      toast.error("Please sign in first");
-      navigate("/signin");
-      return;
-    }
+  useEffect(() => {
+    if (!canceled) return;
+    toast.error("Payment canceled");
+    setSearchParams({});
+  }, [canceled]);
 
-    if (!cardName.trim() || cardNumber.replace(/\s/g, "").length < 12 || !expiry.trim() || cvv.length < 3) {
-      toast.error("Please fill card details to continue");
-      return;
-    }
+  const verifyPayment = async (checkoutSessionId) => {
+    if (!checkoutSessionId || !authToken) return;
 
     try {
-      setLoading(true);
+      setVerifying(true);
       const { data } = await axios.post(
-        `/api/booking/pay/${bookingId}`,
-        {},
+        `/api/booking/verify-payment/${bookingId}`,
+        { sessionId: checkoutSessionId },
         {
           headers: {
             Authorization: `Bearer ${authToken}`,
@@ -77,10 +75,44 @@ const Payment = () => {
       );
 
       if (data.success) {
+        setBooking(data.booking);
         toast.success("Payment successful");
-        navigate("/my-bookings");
+        navigate("/my-bookings", { replace: true });
       } else {
-        toast.error(data.message);
+        toast.error(data.message || "Unable to verify payment");
+      }
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message);
+    } finally {
+      setVerifying(false);
+      setSearchParams({});
+    }
+  };
+
+  useEffect(() => {
+    if (!sessionId) return;
+    verifyPayment(sessionId);
+  }, [sessionId, authToken, bookingId]);
+
+  const onCompletePayment = async () => {
+    if (!authToken) {
+      toast.error("Please sign in first");
+      navigate("/signin");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const { data } = await axios.post(`/api/booking/create-checkout-session/${bookingId}`, {}, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      if (data.success && data.url) {
+        window.location.href = data.url;
+      } else {
+        toast.error(data.message || "Unable to start payment");
       }
     } catch (error) {
       toast.error(error?.response?.data?.message || error.message);
@@ -111,72 +143,36 @@ const Payment = () => {
               <CreditCardIcon className="w-5 h-5 text-primary" />
             </div>
             <div>
-              <h1 className="text-2xl font-semibold">Dummy Payment</h1>
+              <h1 className="text-2xl font-semibold">Stripe Payment</h1>
               <p className="text-sm text-gray-400">
-                This is a demo payment screen. Click below to complete payment.
+                Secure checkout powered by Stripe.
               </p>
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="text-sm text-gray-300">Cardholder Name</label>
-              <input
-                type="text"
-                value={cardName}
-                onChange={(e) => setCardName(e.target.value)}
-                placeholder="John Doe"
-                className="mt-1 w-full rounded-lg bg-black/20 border border-primary/30 px-3 py-2.5 outline-none"
-              />
-            </div>
+          <div className="mt-6 rounded-lg border border-primary/25 bg-black/20 p-4 text-sm text-gray-300">
+            Click below to continue on Stripe's hosted checkout page and complete your payment.
+          </div>
 
-            <div className="md:col-span-2">
-              <label className="text-sm text-gray-300">Card Number</label>
-              <input
-                type="text"
-                maxLength={19}
-                value={cardNumber}
-                onChange={(e) => setCardNumber(e.target.value.replace(/[^\d\s]/g, ""))}
-                placeholder="4242 4242 4242 4242"
-                className="mt-1 w-full rounded-lg bg-black/20 border border-primary/30 px-3 py-2.5 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-300">Expiry</label>
-              <input
-                type="text"
-                value={expiry}
-                onChange={(e) => setExpiry(e.target.value)}
-                placeholder="MM/YY"
-                className="mt-1 w-full rounded-lg bg-black/20 border border-primary/30 px-3 py-2.5 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="text-sm text-gray-300">CVV</label>
-              <input
-                type="password"
-                maxLength={4}
-                value={cvv}
-                onChange={(e) => setCvv(e.target.value.replace(/\D/g, ""))}
-                placeholder="123"
-                className="mt-1 w-full rounded-lg bg-black/20 border border-primary/30 px-3 py-2.5 outline-none"
-              />
-            </div>
+          <div className="mt-4 rounded-lg border border-primary/20 bg-primary/5 p-4 text-xs text-gray-300 space-y-1">
+            <p className="text-white font-medium">Stripe Test Mode (no real card needed)</p>
+            <p>Card Number: <span className="text-primary">4242 4242 4242 4242</span></p>
+            <p>Expiry: any future date (for example 12/34)</p>
+            <p>CVC: any 3 digits (for example 123)</p>
+            <p>ZIP/Postal: any valid format</p>
           </div>
 
           <button
             onClick={onCompletePayment}
-            disabled={loading || booking?.isPaid}
+            disabled={loading || verifying || booking?.isPaid}
             className="mt-6 w-full py-3 rounded-lg bg-primary hover:bg-primary-dull transition disabled:opacity-60 font-medium"
           >
-            {booking?.isPaid ? "Already Paid" : loading ? "Processing..." : "Pay Now"}
+            {booking?.isPaid ? "Already Paid" : loading || verifying ? "Processing..." : "Pay with Stripe"}
           </button>
 
           <div className="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
             <ShieldCheckIcon className="w-4 h-4 text-primary" />
-            <p>Dummy secure checkout for demo use only</p>
+            <p>Stripe hosted secure checkout</p>
           </div>
         </div>
 
