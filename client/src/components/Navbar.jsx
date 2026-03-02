@@ -2,16 +2,35 @@ import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { MenuIcon, SearchIcon, TicketPlus, XIcon } from "lucide-react";
 import { useAppContext } from "../context/AppContext";
+import { assets } from "../assets/assets";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const { user, logoutUser } = useAppContext();
   const navigate = useNavigate();
+
+  const onSearchSubmit = (event) => {
+    event.preventDefault();
+    const normalizedSearch = searchTerm.trim();
+
+    if (!normalizedSearch) {
+      navigate("/movies");
+      setIsSearchOpen(false);
+      setIsOpen(false);
+      return;
+    }
+
+    navigate(`/movies?search=${encodeURIComponent(normalizedSearch)}`);
+    setIsSearchOpen(false);
+    setIsOpen(false);
+  };
 
   return (
     <div className="fixed top-0 left-0 z-50 w-full flex items-center justify-between px-6 md:px-16 lg:px-36 py-5">
       <Link to="/" className="max-md:flex-1">
-        <p className="text-2xl md:text-3xl font-extrabold tracking-tight text-white">Frame<span className="text-primary">Flix</span></p>
+        <img src={assets.logo} alt="FrameFlix" className="h-8 md:h-9 w-auto" />
       </Link>
 
       <div
@@ -27,6 +46,21 @@ const Navbar = () => {
           className="block md:hidden absolute top-6 right-6 w-6 h-6 cursor-pointer"
           onClick={() => setIsOpen(!isOpen)}
         />
+
+        <form onSubmit={onSearchSubmit} className="md:hidden flex items-center gap-2 w-[85%] max-w-xs">
+          <input
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search movies"
+            className="flex-1 px-3 py-2 rounded-full border border-primary/40 bg-black/40 outline-none focus:border-primary text-sm"
+          />
+          <button
+            type="submit"
+            className="px-4 py-2 rounded-full bg-primary hover:bg-primary-dull text-xs font-semibold transition cursor-pointer"
+          >
+            Go
+          </button>
+        </form>
 
         <Link
           onClick={() => {
@@ -76,12 +110,34 @@ const Navbar = () => {
       </div>
 
       <div className="flex items-center gap-3 md:gap-8">
-        <SearchIcon className="max-md:hidden w-6 h-6 cursor-pointer" />
+        <div className="hidden md:flex items-center gap-2">
+          {isSearchOpen && (
+            <form onSubmit={onSearchSubmit} className="flex items-center gap-2">
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search movies"
+                className="w-44 lg:w-52 px-3 py-1.5 rounded-full border border-primary/40 bg-black/40 outline-none focus:border-primary text-sm"
+              />
+              <button
+                type="submit"
+                className="px-3 py-1.5 rounded-full bg-primary hover:bg-primary-dull text-xs font-semibold transition cursor-pointer"
+              >
+                Go
+              </button>
+            </form>
+          )}
+
+          <SearchIcon
+            className="w-6 h-6 cursor-pointer"
+            onClick={() => setIsSearchOpen((prev) => !prev)}
+          />
+        </div>
 
         {!user ? (
           <button
             onClick={() => navigate("/signin")}
-            className="px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-medium cursor-pointer"
+            className="px-4 py-1 sm:px-7 sm:py-2 bg-primary hover:bg-primary-dull transition rounded-full font-semibold cursor-pointer border border-primary/40 shadow-[0_10px_24px_-12px_rgba(248,69,101,0.8)]"
           >
             Login
           </button>
@@ -89,7 +145,7 @@ const Navbar = () => {
           <div className="flex items-center gap-2 md:gap-3">
             <button
               onClick={() => navigate("/my-bookings")}
-              className="hidden md:inline-flex items-center gap-1 px-4 py-2 text-xs bg-primary/80 hover:bg-primary rounded-full font-medium cursor-pointer"
+              className="hidden md:inline-flex items-center gap-1 px-4 py-2 text-xs bg-primary hover:bg-primary-dull rounded-full font-semibold cursor-pointer border border-primary/40 shadow-[0_10px_24px_-12px_rgba(248,69,101,0.8)] transition"
             >
               <TicketPlus width={14} /> My Bookings
             </button>
@@ -98,7 +154,7 @@ const Navbar = () => {
             </div>
             <button
               onClick={logoutUser}
-              className="px-3 py-1.5 text-xs border border-gray-500 rounded-full hover:bg-white/10 cursor-pointer"
+              className="px-3 py-1.5 text-xs border border-primary/40 rounded-full bg-primary/20 hover:bg-primary/30 text-white font-semibold transition cursor-pointer"
             >
               Logout
             </button>

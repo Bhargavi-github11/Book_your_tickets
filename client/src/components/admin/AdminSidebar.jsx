@@ -9,7 +9,7 @@ const AdminSidebar = () => {
     imageUrl: assets.profile
   }
   const adminNavlinks = [
-  { name: 'Dashboard', path: '/admin', icon: LayoutDashboardIcon },
+  { name: 'Admin Dashboard', path: '/admin', icon: LayoutDashboardIcon },
   { name: 'Add Shows', path: '/admin/add-shows', icon: PlusSquareIcon },
   { name: 'List Shows', path: '/admin/list-shows', icon: ListIcon },
   { name: 'List Bookings', path: '/admin/list-bookings', icon: ListCollapseIcon },
@@ -25,14 +25,14 @@ const AdminSidebar = () => {
   key={index}
   to={link.path} end
   className={({ isActive }) =>
-  `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 md:pl-10 first:mt-6
-   ${isActive ? 'bg-primary/15 text-primary group' : 'text-gray-400'}`
+  `relative flex items-center max-md:justify-center gap-2 w-full py-2.5 md:pl-10 first:mt-6 transition-all duration-200
+   ${isActive ? 'bg-primary/20 text-primary group font-semibold border-y border-primary/20' : 'text-gray-400 hover:text-white hover:bg-white/5'}`
 }
 >
   {({ isActive }) => (
     <>
       <link.icon className="w-5 h-5" />
-      <p className="max-md:hidden">{link.name}</p>
+      <p className="max-md:hidden tracking-wide">{link.name}</p>
       {isActive && (
         <span className="absolute right-0 top-0 h-full w-1.5 bg-primary rounded-l" />
       )}

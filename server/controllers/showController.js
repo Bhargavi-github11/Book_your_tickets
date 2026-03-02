@@ -49,6 +49,23 @@ const fetchPopularFromTmdb = async (page = 1) => {
     };
 }
 
+const fetchSearchFromTmdb = async ({ page = 1, search = "" }) => {
+    const { data } = await axios.get('https://api.themoviedb.org/3/search/movie', {
+        headers: tmdbHeaders(),
+        params: {
+            page,
+            query: search,
+            include_adult: false,
+        },
+    })
+
+    return {
+        movies: data.results || [],
+        page: Number(data.page || page),
+        totalPages: Number(data.total_pages || 1),
+    }
+}
+
 const fetchUpcomingFromTmdb = async (page = 1) => {
     const { data } = await axios.get('https://api.themoviedb.org/3/movie/upcoming', {
         headers: tmdbHeaders(),
@@ -168,6 +185,23 @@ export const getNowPlayingMovies = async (req, res)=>{
 
 export const getAllShows = async (req, res) => {
     try {
+        const requestedPage = Number(req.query.page || 1)
+        const safePage = Number.isFinite(requestedPage) && requestedPage > 0 ? requestedPage : 1
+        const search = String(req.query.search || '').trim()
+
+        if (search) {
+            const { movies, page, totalPages } = await fetchSearchFromTmdb({ page: safePage, search })
+            const enrichedMovies = await enrichMovies(movies)
+
+            return res.json({
+                success: true,
+                shows: enrichedMovies,
+                page,
+                totalPages,
+                hasNextPage: page < totalPages,
+            })
+        }
+
         await sendTmdbListResponse(req, res, fetchPopularFromTmdb, "shows")
     } catch (error) {
         console.error(error);

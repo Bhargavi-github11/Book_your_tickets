@@ -194,7 +194,7 @@ const MovieDetails = () => {
               {trailerLoading ? 'Loading...' : 'Watch Trailer'}
             </button>
 
-            <button onClick={onBuyTickets} className="px-8 py-3 bg-primary rounded-md cursor-pointer">
+            <button onClick={onBuyTickets} className="px-8 py-3 bg-primary hover:bg-primary-dull transition rounded-md cursor-pointer font-semibold border border-primary/40 shadow-[0_12px_24px_-12px_rgba(248,69,101,0.85)]">
               Buy Tickets
             </button>
 
@@ -230,7 +230,7 @@ const MovieDetails = () => {
         ))}
       </div>
       <div className='flex justify-center mt-20'>
-        <button onClick={()=> {navigate('/movies');scrollTo(0,0)}} className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-medium cursor-pointer'> Show More</button>
+        <button onClick={()=> {navigate('/movies');scrollTo(0,0)}} className='px-10 py-3 text-sm bg-primary hover:bg-primary-dull transition rounded-md font-semibold cursor-pointer border border-primary/40 shadow-[0_12px_24px_-12px_rgba(248,69,101,0.8)]'> Show More</button>
       </div>
 
       {isTrailerOpen && (

@@ -167,7 +167,7 @@ const AddShows = () => {
           />
          <button
   onClick={handleDateTimeAdd}
-          className="bg-primary/80 text-white px-3 py-2 text-sm rounded-lg hover:bg-primary cursor-pointer"
+          className="bg-primary text-white px-3 py-2 text-sm rounded-lg hover:bg-primary-dull cursor-pointer border border-primary/40 font-semibold shadow-[0_10px_20px_-12px_rgba(248,69,101,0.8)] transition"
 >
   Add Time
 </button>
@@ -195,7 +195,7 @@ const AddShows = () => {
     </div>
 
 )}
-<button onClick={onAddShow} disabled={isSubmitting} className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition-all cursor-pointer disabled:opacity-60'>{isSubmitting ? 'Adding...' : 'Add Show'}</button>
+<button onClick={onAddShow} disabled={isSubmitting} className='bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary-dull transition-all cursor-pointer disabled:opacity-60 border border-primary/40 font-semibold shadow-[0_12px_24px_-12px_rgba(248,69,101,0.85)]'>{isSubmitting ? 'Adding...' : 'Add Shows'}</button>
     </>
   ) : <Loding />
 }

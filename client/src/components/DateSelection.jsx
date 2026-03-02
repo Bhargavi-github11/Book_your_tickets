@@ -33,7 +33,7 @@ const DateSelection = ({ dateTime = {}, id }) => {
               {Object.keys(dateTime).map(date => (
                 <button onClick={()=> setSelected(date)}
                   key={date}
-                  className={`flex flex-col items-center justify-center h-14 w-14 rounded cursor-pointer ${selected === date ? "bg-primary text-white" : "border border-primary/70"} `}
+                  className={`flex flex-col items-center justify-center h-14 w-14 rounded cursor-pointer transition ${selected === date ? "bg-primary text-white border border-primary/50 shadow-[0_10px_20px_-12px_rgba(248,69,101,0.85)]" : "border border-primary/70 hover:bg-primary/20"} `}
                 >
                   <span>{new Date(date).getDate()}</span>
                   <span>
@@ -49,7 +49,7 @@ const DateSelection = ({ dateTime = {}, id }) => {
           </div>
         </div>
 
-        <button onClick={onBookHandler} className="bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary/90 transition cursor-pointer">
+        <button onClick={onBookHandler} className="bg-primary text-white px-8 py-2 mt-6 rounded hover:bg-primary-dull transition cursor-pointer font-semibold border border-primary/40 shadow-[0_12px_24px_-12px_rgba(248,69,101,0.8)]">
           Book Now
         </button>
       </div>

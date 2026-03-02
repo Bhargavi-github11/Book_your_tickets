@@ -3,17 +3,27 @@ import MoviesCard from '../components/MoviesCard'
 import BlurCircle from '../components/BlurCircle'
 import { useAppContext } from '../context/AppContext'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 const Movies = () => {
   const { axios } = useAppContext()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [movies, setMovies] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
+  const [searchInput, setSearchInput] = useState('')
+  const [activeSearch, setActiveSearch] = useState('')
 
-  const fetchMoviesPage = async (page) => {
+  const fetchMoviesPage = async (page, searchValue = activeSearch) => {
     try {
       setLoading(true)
-      const { data } = await axios.get(`/api/show/all?page=${page}`)
+      const searchQuery = String(searchValue || '').trim()
+      const encodedSearch = encodeURIComponent(searchQuery)
+      const requestUrl = searchQuery
+        ? `/api/show/all?page=${page}&search=${encodedSearch}`
+        : `/api/show/all?page=${page}`
+
+      const { data } = await axios.get(requestUrl)
 
       if (data.success) {
         setMovies(Array.isArray(data.shows) ? data.shows : [])
@@ -30,19 +40,33 @@ const Movies = () => {
   }
 
   useEffect(() => {
-    fetchMoviesPage(1)
-  }, [])
+    const querySearch = String(searchParams.get('search') || '').trim()
+    setSearchInput(querySearch)
+    setActiveSearch(querySearch)
+    fetchMoviesPage(1, querySearch)
+  }, [searchParams])
+
+  const onSearch = (event) => {
+    event.preventDefault()
+    const normalized = searchInput.trim()
+
+    if (normalized) {
+      setSearchParams({ search: normalized })
+    } else {
+      setSearchParams({})
+    }
+  }
 
   const onNext = () => {
     if (currentPage < totalPages) {
-      fetchMoviesPage(currentPage + 1)
+      fetchMoviesPage(currentPage + 1, activeSearch)
       scrollTo(0, 0)
     }
   }
 
   const onPrev = () => {
     if (currentPage > 1) {
-      fetchMoviesPage(currentPage - 1)
+      fetchMoviesPage(currentPage - 1, activeSearch)
       scrollTo(0, 0)
     }
   }
@@ -77,7 +101,23 @@ const Movies = () => {
     <div className='relative my-40 mb-60 px-6 md:px-16 lg:px-40 xl:px-44 overflow-hidden min-h-[80vh]'>
       <BlurCircle top='150px' left='0px' />
       <BlurCircle bottom='50px' right='50px' />
-      <h1 className='text-lg font-medium  my-4'>Now Showing</h1>
+      <div className='flex flex-col gap-4 md:flex-row md:items-center md:justify-between my-4'>
+        <h1 className='text-lg font-medium'>{activeSearch ? `Search Results for "${activeSearch}"` : 'Now Showing'}</h1>
+        <form onSubmit={onSearch} className='flex items-center gap-2'>
+          <input
+            value={searchInput}
+            onChange={(e) => setSearchInput(e.target.value)}
+            placeholder='Search movie by name'
+            className='w-56 md:w-72 px-4 py-2 rounded-full border border-primary/35 bg-black/30 outline-none focus:border-primary'
+          />
+          <button
+            type='submit'
+            className='px-5 py-2 rounded-full bg-primary hover:bg-primary-dull font-medium transition cursor-pointer'
+          >
+            Search
+          </button>
+        </form>
+      </div>
       <div className='flex flex-wrap max-sm:justify-center gap-8 '>
         {movies.map((movie)=>(
           <MoviesCard movie={movie} key={movie._id} />
@@ -88,7 +128,7 @@ const Movies = () => {
         <button
           onClick={onPrev}
           disabled={currentPage === 1 || loading}
-          className='px-5 py-2 rounded-md border border-primary/30 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+          className='px-5 py-2 rounded-md border border-primary/40 bg-primary/20 hover:bg-primary/30 font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
         >
           Previous
         </button>
@@ -96,15 +136,31 @@ const Movies = () => {
         <button
           onClick={onNext}
           disabled={currentPage >= totalPages || loading}
-          className='px-5 py-2 rounded-md bg-primary hover:bg-primary-dull cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
+          className='px-5 py-2 rounded-md bg-primary hover:bg-primary-dull border border-primary/40 shadow-[0_10px_22px_-12px_rgba(248,69,101,0.8)] font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed'
         >
           Next
         </button>
       </div>
     </div>
   ) :(
-    <div className='flex flex-col items-center justify-center h-screen'>
-      <h1 className='text-3xl font-bold text-center'>No movies available</h1>
+    <div className='flex flex-col items-center justify-center h-screen px-6'>
+      <h1 className='text-3xl font-bold text-center'>
+        {activeSearch ? `No movies found for "${activeSearch}"` : 'No movies available'}
+      </h1>
+      <form onSubmit={onSearch} className='mt-6 flex items-center gap-2'>
+        <input
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          placeholder='Search movie by name'
+          className='w-56 md:w-72 px-4 py-2 rounded-full border border-primary/35 bg-black/30 outline-none focus:border-primary'
+        />
+        <button
+          type='submit'
+          className='px-5 py-2 rounded-full bg-primary hover:bg-primary-dull font-medium transition cursor-pointer'
+        >
+          Search
+        </button>
+      </form>
     </div>
   )
 }
