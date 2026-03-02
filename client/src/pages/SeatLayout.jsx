@@ -44,18 +44,37 @@ const SeatLayout = () => {
   const [selectedDate, setSelectedDate] = useState(date || getNextDateKeys(1)[0])
   const [occupiedSeats, setOccupiedSeats] = useState([])
   const [show, setShow] = useState(null);
+  const [showLoading, setShowLoading] = useState(true)
+  const [showUnavailable, setShowUnavailable] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
 
   const { axios, shows, authToken } = useAppContext()
 
   const navigate = useNavigate()
 
-  const getShow = async () =>{
-    const selectedMovie = shows.find((item) => String(item._id) === String(id))
-    const dateKeys = getNextDateKeys(4)
-    const initialDate = dateKeys.includes(String(date)) ? String(date) : dateKeys[0]
+  const getShow = async () => {
+    try {
+      setShowLoading(true)
+      setShowUnavailable(false)
 
-    if(selectedMovie){
+      let selectedMovie = shows.find((item) => String(item._id) === String(id))
+
+      if (!selectedMovie) {
+        const { data } = await axios.get(`/api/show/${id}`)
+        if (data.success && data.movie) {
+          selectedMovie = data.movie
+        }
+      }
+
+      if (!selectedMovie) {
+        setShow(null)
+        setShowUnavailable(true)
+        return
+      }
+
+      const dateKeys = getNextDateKeys(4)
+      const initialDate = dateKeys.includes(String(date)) ? String(date) : dateKeys[0]
+
       const dateTimeMap = dateKeys.reduce((acc, currentDate) => {
         acc[currentDate] = buildDateSlotsForDate(currentDate)
         return acc
@@ -69,6 +88,15 @@ const SeatLayout = () => {
       setSelectedDate(initialDate)
       setSelectedTime(null)
       setSelectedSeats([])
+
+      if (String(date) !== initialDate) {
+        navigate(`/movies/${id}/${initialDate}`, { replace: true })
+      }
+    } catch (error) {
+      setShow(null)
+      setShowUnavailable(true)
+    } finally {
+      setShowLoading(false)
     }
   }
   const handleSeatClick = (seatId) =>{
@@ -206,7 +234,20 @@ const SeatLayout = () => {
       setBookingLoading(false)
     }
   }
-  return show ? (
+  if (showLoading) {
+    return <Loding />
+  }
+
+  if (showUnavailable || !show) {
+    return (
+      <div className='flex flex-col items-center justify-center h-screen px-6'>
+        <h1 className='text-2xl font-semibold text-center'>Movie not available right now</h1>
+        <button onClick={() => navigate(`/movies/${id}`)} className='mt-4 px-6 py-2 rounded-md bg-primary cursor-pointer'>Back to Movie</button>
+      </div>
+    )
+  }
+
+  return (
     <div className='flex flex-col md:flex-row px-6 md:px-16 lg:px-40 py-30 md:pt-50'>
       {/* Available Timings */}
       <div className='w-60 bg-primary/10 border border-primary/20 rounded-lg py-10 h-max md:sticky md:top-30'>
@@ -282,8 +323,6 @@ const SeatLayout = () => {
          </button>
       </div>
     </div>
-  ) : (
-    <Loding />
   )
 }
 export default SeatLayout
