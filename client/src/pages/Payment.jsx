@@ -103,7 +103,9 @@ const Payment = () => {
 
     try {
       setLoading(true);
-      const { data } = await axios.post(`/api/booking/create-checkout-session/${bookingId}`, {}, {
+      const { data } = await axios.post(`/api/booking/create-checkout-session/${bookingId}`, {
+        clientOrigin: window.location.origin,
+      }, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },

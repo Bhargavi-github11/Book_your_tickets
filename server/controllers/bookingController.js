@@ -21,6 +21,15 @@ const getStripeWebhookSecret = () => {
   return process.env.STRIPE_WEBHOOK_SECRET;
 };
 
+const resolveClientUrl = (req, clientOrigin) => {
+  const providedClientOrigin = String(clientOrigin || "").trim();
+  const requestOrigin = String(req.headers.origin || "").trim();
+
+  const baseUrl = providedClientOrigin || requestOrigin || "http://localhost:5173";
+
+  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+};
+
 const markBookingPaid = async (bookingId) => {
   if (!bookingId) return null;
 
@@ -216,6 +225,7 @@ export const completeDummyPayment = async (req, res) => {
 export const createCheckoutSession = async (req, res) => {
   try {
     const { bookingId } = req.params;
+    const { clientOrigin } = req.body || {};
 
     const booking = await Booking.findOne({ _id: bookingId, user: req.user.id }).populate({
       path: "show",
@@ -231,7 +241,7 @@ export const createCheckoutSession = async (req, res) => {
     }
 
     const stripe = getStripeClient();
-    const clientUrl = process.env.CLIENT_URL || "http://localhost:5173";
+    const clientUrl = resolveClientUrl(req, clientOrigin);
     const currency = String(process.env.STRIPE_CURRENCY || "inr").toLowerCase();
 
     const movieTitle = booking.show?.movie?.title || "Movie Ticket";
