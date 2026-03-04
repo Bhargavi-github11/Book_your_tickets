@@ -1,5 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { constants, createPublicKey, privateDecrypt } from "crypto";
 import User from "../models/User.js";
 
 const PASSWORD_DIGEST_REGEX = /^[a-f0-9]{64}$/i;
@@ -19,6 +20,58 @@ const safeUser = (user) => ({
   image: user.image || "",
 });
 
+const normalizePemKey = (value) => String(value || "").replace(/\\n/g, "\n").trim();
+
+const decodeBase64ToString = (value) => {
+  try {
+    return Buffer.from(String(value || ""), "base64").toString("utf8").trim();
+  } catch {
+    return "";
+  }
+};
+
+const looksLikePem = (value) => String(value || "").includes("-----BEGIN ");
+
+const resolveEnvKey = (directName, base64Name) => {
+  const directValue = normalizePemKey(process.env[directName]);
+  if (looksLikePem(directValue)) {
+    return directValue;
+  }
+
+  const decodedDirect = decodeBase64ToString(directValue);
+  if (looksLikePem(decodedDirect)) {
+    return decodedDirect;
+  }
+
+  const base64Value = normalizePemKey(process.env[base64Name]);
+  const decodedBase64 = decodeBase64ToString(base64Value);
+  if (looksLikePem(decodedBase64)) {
+    return decodedBase64;
+  }
+
+  return "";
+};
+
+const getPrivateKey = () => resolveEnvKey("AUTH_PRIVATE_KEY", "AUTH_PRIVATE_KEY_BASE64");
+
+const getPublicKey = () => {
+  const configuredPublicKey = resolveEnvKey("AUTH_PUBLIC_KEY", "AUTH_PUBLIC_KEY_BASE64");
+  if (configuredPublicKey) {
+    return configuredPublicKey;
+  }
+
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    return "";
+  }
+
+  try {
+    return createPublicKey(privateKey).export({ type: "spki", format: "pem" }).toString();
+  } catch {
+    return "";
+  }
+};
+
 const resolveIncomingPassword = (body) => {
   const passwordDigest = String(body?.passwordDigest || "").trim();
   if (passwordDigest) {
@@ -30,6 +83,46 @@ const resolveIncomingPassword = (body) => {
 
   const plainPassword = String(body?.password || "");
   return plainPassword;
+};
+
+const resolveLegacyPlainPassword = (body) => {
+  const encryptedPassword = String(body?.passwordEncrypted || "").trim();
+  if (!encryptedPassword) {
+    return "";
+  }
+
+  const privateKey = getPrivateKey();
+  if (!privateKey) {
+    return "";
+  }
+
+  try {
+    const encryptedBuffer = Buffer.from(encryptedPassword, "base64");
+    return privateDecrypt(
+      {
+        key: privateKey,
+        padding: constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      encryptedBuffer
+    ).toString("utf8");
+  } catch {
+    return "";
+  }
+};
+
+export const getAuthPublicKey = async (req, res) => {
+  try {
+    const publicKey = getPublicKey();
+
+    if (!publicKey) {
+      return res.json({ success: false, message: "Auth encryption keys are not configured" });
+    }
+
+    return res.json({ success: true, publicKey });
+  } catch (error) {
+    return res.json({ success: false, message: error.message });
+  }
 };
 
 export const register = async (req, res) => {
@@ -101,9 +194,9 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email } = req.body || {};
-    const password = resolveIncomingPassword(req.body);
+    const passwordDigest = resolveIncomingPassword(req.body);
 
-    if (!email || !password) {
+    if (!email || !passwordDigest) {
       return res.json({ success: false, message: "email and passwordDigest are required" });
     }
 
@@ -121,10 +214,20 @@ export const login = async (req, res) => {
       });
     }
 
-    const matched = await bcrypt.compare(password, user.password);
+    const matchedDigest = await bcrypt.compare(passwordDigest, user.password);
 
-    if (!matched) {
-      return res.json({ success: false, message: "Invalid email or password" });
+    if (!matchedDigest) {
+      const legacyPlainPassword = resolveLegacyPlainPassword(req.body);
+      const matchedLegacy = legacyPlainPassword
+        ? await bcrypt.compare(legacyPlainPassword, user.password)
+        : false;
+
+      if (!matchedLegacy) {
+        return res.json({ success: false, message: "Invalid email or password" });
+      }
+
+      user.password = await bcrypt.hash(passwordDigest, 10);
+      await user.save();
     }
 
     const token = signToken(user);

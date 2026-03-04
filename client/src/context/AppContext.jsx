@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { dummyShowsData } from "../assets/assets";
+import { encryptPassword } from "../lib/passwordCrypto";
 
 const configuredBaseUrl = import.meta.env.VITE_BASE_URL;
 if (configuredBaseUrl) {
@@ -51,6 +52,19 @@ export const AppProvider = ({ children }) => {
       .join("");
   };
 
+  const getLegacyEncryptedPassword = async (password) => {
+    try {
+      const { data } = await axios.get("/api/auth/public-key");
+      if (!data?.success || !data?.publicKey) {
+        return "";
+      }
+
+      return await encryptPassword(password, data.publicKey);
+    } catch {
+      return "";
+    }
+  };
+
   const registerUser = async ({ name, email, password }) => {
     const normalizedPassword = String(password || "");
     const passwordDigest = await toSha256Hex(normalizedPassword);
@@ -72,12 +86,20 @@ export const AppProvider = ({ children }) => {
   };
 
   const loginUser = async ({ email, password }) => {
-    const passwordDigest = await toSha256Hex(password);
+    const normalizedPassword = String(password || "");
+    const passwordDigest = await toSha256Hex(normalizedPassword);
+    const passwordEncrypted = await getLegacyEncryptedPassword(normalizedPassword);
 
-    const { data } = await axios.post("/api/auth/login", {
+    const payload = {
       email: String(email || "").trim(),
       passwordDigest,
-    });
+    };
+
+    if (passwordEncrypted) {
+      payload.passwordEncrypted = passwordEncrypted;
+    }
+
+    const { data } = await axios.post("/api/auth/login", payload);
 
     if (!data.success) {
       throw new Error(data.message || "Unable to login");
