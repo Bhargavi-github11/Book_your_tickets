@@ -253,6 +253,54 @@ export const login = async (req, res) => {
   }
 };
 
+export const resetPassword = async (req, res) => {
+  try {
+    const { email, passwordLength, resetCode } = req.body || {};
+    const passwordDigest = resolveIncomingPassword(req.body);
+
+    if (!email || !passwordDigest || !resetCode) {
+      return res.json({
+        success: false,
+        message: "email, passwordDigest and resetCode are required",
+      });
+    }
+
+    const configuredResetCode = String(
+      process.env.PASSWORD_RESET_CODE || process.env.ADMIN_SIGNUP_CODE || ""
+    ).trim();
+
+    if (!configuredResetCode) {
+      return res.json({ success: false, message: "Password reset code is not configured" });
+    }
+
+    if (String(resetCode).trim() !== configuredResetCode) {
+      return res.json({ success: false, message: "Invalid reset code" });
+    }
+
+    const normalizedPasswordLength = Number(passwordLength || 0);
+    if (normalizedPasswordLength > 0 && normalizedPasswordLength < 6) {
+      return res.json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const normalizedEmail = String(email).toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+
+    if (!user) {
+      return res.json({ success: false, message: "Account not found" });
+    }
+
+    user.password = await bcrypt.hash(passwordDigest, 10);
+    await user.save();
+
+    return res.json({ success: true, message: "Password reset successful" });
+  } catch (error) {
+    return res.json({ success: false, message: error.message });
+  }
+};
+
 export const me = async (req, res) => {
   try {
     const user = await User.findById(req.user.id).lean();

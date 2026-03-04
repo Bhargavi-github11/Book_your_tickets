@@ -101,18 +101,41 @@ export const AppProvider = ({ children }) => {
   const loginUser = async ({ email, password }) => {
     const normalizedPassword = String(password || "");
     const passwordDigest = await toSha256Hex(normalizedPassword);
-    const passwordEncrypted = await getLegacyEncryptedPassword(normalizedPassword);
+    const normalizedEmail = String(email || "").trim();
 
-    const payload = {
-      email: String(email || "").trim(),
+    const digestPayload = {
+      email: normalizedEmail,
       passwordDigest,
     };
 
-    if (passwordEncrypted) {
-      payload.passwordEncrypted = passwordEncrypted;
+    const { data: digestData } = await axios.post("/api/auth/login", digestPayload);
+
+    if (digestData.success) {
+      saveToken(digestData.token);
+      setUser(digestData.user);
+      return digestData.user;
     }
 
-    const { data } = await axios.post("/api/auth/login", payload);
+    const canTryLegacyMigration =
+      String(digestData.message || "").toLowerCase() === "invalid email or password";
+
+    if (!canTryLegacyMigration) {
+      throw new Error(digestData.message || "Unable to login");
+    }
+
+    const passwordEncrypted = await getLegacyEncryptedPassword(normalizedPassword);
+
+    if (!passwordEncrypted) {
+      throw new Error("Legacy account login needs auth keys on server. Please reset password.");
+    }
+
+    const legacyPayload = {
+      email: normalizedEmail,
+      passwordDigest,
+      passwordEncrypted,
+    };
+
+    const { data } = await axios.post("/api/auth/login", legacyPayload);
 
     if (!data.success) {
       throw new Error(data.message || "Unable to login");
@@ -121,6 +144,24 @@ export const AppProvider = ({ children }) => {
     saveToken(data.token);
     setUser(data.user);
     return data.user;
+  };
+
+  const resetUserPassword = async ({ email, password, resetCode }) => {
+    const normalizedPassword = String(password || "");
+    const passwordDigest = await toSha256Hex(normalizedPassword);
+
+    const { data } = await axios.post("/api/auth/reset-password", {
+      email: String(email || "").trim(),
+      passwordDigest,
+      passwordLength: normalizedPassword.length,
+      resetCode: String(resetCode || "").trim(),
+    });
+
+    if (!data.success) {
+      throw new Error(data.message || "Unable to reset password");
+    }
+
+    return true;
   };
 
   const logoutUser = () => {
@@ -291,6 +332,7 @@ export const AppProvider = ({ children }) => {
     image_base_url,
     registerUser,
     loginUser,
+    resetUserPassword,
     logoutUser,
     authToken,
   };
