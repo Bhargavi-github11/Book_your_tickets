@@ -80,7 +80,9 @@ export const getDashboardData = async (req, res) => {
 
  export const getAllBookings = async (req, res) => {
     try{
-        const bookings = await Booking.find({}).populate("user").populate({path: "show",
+        const bookings = await Booking.find({})
+        .populate({ path: "user", select: "name email role image" })
+        .populate({path: "show",
             populate: {path: "movie"}
         }).sort({createdAt: -1});
         res.json({success: true, bookings})

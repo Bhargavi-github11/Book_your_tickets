@@ -3,6 +3,7 @@ import axios from "axios";
 import { useLocation, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { dummyShowsData } from "../assets/assets";
+import { encryptPassword } from "../lib/passwordCrypto";
 
 const configuredBaseUrl = import.meta.env.VITE_BASE_URL;
 if (configuredBaseUrl) {
@@ -43,11 +44,37 @@ export const AppProvider = ({ children }) => {
       ? { Authorization: `Bearer ${authToken}` }
       : {};
 
+  const isProduction = import.meta.env.PROD;
+
+  const buildPasswordPayload = async (password) => {
+    const rawPassword = String(password || "");
+
+    try {
+      const { data } = await axios.get("/api/auth/public-key");
+      if (!data?.success || !data?.publicKey) {
+        if (isProduction) {
+          throw new Error("Secure authentication is not available. Please try again later.");
+        }
+        return { password: rawPassword };
+      }
+
+      const passwordEncrypted = await encryptPassword(rawPassword, data.publicKey);
+      return { passwordEncrypted };
+    } catch (error) {
+      if (isProduction) {
+        throw error;
+      }
+      return { password: rawPassword };
+    }
+  };
+
   const registerUser = async ({ name, email, password }) => {
+    const passwordPayload = await buildPasswordPayload(password);
+
     const { data } = await axios.post("/api/auth/register", {
       name: String(name || "").trim(),
       email: String(email || "").trim(),
-      password,
+      ...passwordPayload,
     });
 
     if (!data.success) {
@@ -60,9 +87,11 @@ export const AppProvider = ({ children }) => {
   };
 
   const loginUser = async ({ email, password }) => {
+    const passwordPayload = await buildPasswordPayload(password);
+
     const { data } = await axios.post("/api/auth/login", {
       email: String(email || "").trim(),
-      password,
+      ...passwordPayload,
     });
 
     if (!data.success) {
