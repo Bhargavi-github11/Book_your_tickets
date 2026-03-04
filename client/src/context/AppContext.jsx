@@ -54,9 +54,20 @@ export const AppProvider = ({ children }) => {
 
   const getLegacyEncryptedPassword = async (password) => {
     try {
-      const { data } = await axios.get("/api/auth/public-key", {
-        params: { ts: Date.now() },
-      });
+      let data;
+
+      try {
+        const response = await axios.post("/api/auth/public-key", {
+          ts: Date.now(),
+        });
+        data = response?.data;
+      } catch {
+        const response = await axios.get("/api/auth/public-key", {
+          params: { ts: Date.now() },
+        });
+        data = response?.data;
+      }
+
       if (!data?.success || !data?.publicKey) {
         return "";
       }
