@@ -43,11 +43,23 @@ export const AppProvider = ({ children }) => {
       ? { Authorization: `Bearer ${authToken}` }
       : {};
 
+  const toSha256Hex = async (value) => {
+    const encoded = new TextEncoder().encode(String(value || ""));
+    const buffer = await window.crypto.subtle.digest("SHA-256", encoded);
+    return Array.from(new Uint8Array(buffer))
+      .map((byte) => byte.toString(16).padStart(2, "0"))
+      .join("");
+  };
+
   const registerUser = async ({ name, email, password }) => {
+    const normalizedPassword = String(password || "");
+    const passwordDigest = await toSha256Hex(normalizedPassword);
+
     const { data } = await axios.post("/api/auth/register", {
       name: String(name || "").trim(),
       email: String(email || "").trim(),
-      password,
+      passwordDigest,
+      passwordLength: normalizedPassword.length,
     });
 
     if (!data.success) {
@@ -60,9 +72,11 @@ export const AppProvider = ({ children }) => {
   };
 
   const loginUser = async ({ email, password }) => {
+    const passwordDigest = await toSha256Hex(password);
+
     const { data } = await axios.post("/api/auth/login", {
       email: String(email || "").trim(),
-      password,
+      passwordDigest,
     });
 
     if (!data.success) {

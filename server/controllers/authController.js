@@ -2,6 +2,8 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 
+const PASSWORD_DIGEST_REGEX = /^[a-f0-9]{64}$/i;
+
 const signToken = (user) =>
   jwt.sign(
     { id: String(user._id), email: user.email, role: user.role },
@@ -17,18 +19,33 @@ const safeUser = (user) => ({
   image: user.image || "",
 });
 
+const resolveIncomingPassword = (body) => {
+  const passwordDigest = String(body?.passwordDigest || "").trim();
+  if (passwordDigest) {
+    if (!PASSWORD_DIGEST_REGEX.test(passwordDigest)) {
+      throw new Error("Invalid passwordDigest format");
+    }
+    return passwordDigest.toLowerCase();
+  }
+
+  const plainPassword = String(body?.password || "");
+  return plainPassword;
+};
+
 export const register = async (req, res) => {
   try {
-    const { name, email, password } = req.body || {};
+    const { name, email, passwordLength } = req.body || {};
+    const password = resolveIncomingPassword(req.body);
 
     if (!name || !email || !password) {
       return res.json({
         success: false,
-        message: "name, email and password are required",
+        message: "name, email and passwordDigest are required",
       });
     }
 
-    if (password.length < 6) {
+    const normalizedPasswordLength = Number(passwordLength || 0);
+    if (normalizedPasswordLength > 0 && normalizedPasswordLength < 6) {
       return res.json({
         success: false,
         message: "Password must be at least 6 characters",
@@ -83,10 +100,11 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body || {};
+    const { email } = req.body || {};
+    const password = resolveIncomingPassword(req.body);
 
     if (!email || !password) {
-      return res.json({ success: false, message: "email and password are required" });
+      return res.json({ success: false, message: "email and passwordDigest are required" });
     }
 
     const normalizedEmail = String(email).toLowerCase().trim();
