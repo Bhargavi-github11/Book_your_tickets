@@ -1,5 +1,7 @@
 const pemToArrayBuffer = (pem) => {
-  const base64 = String(pem || "")
+  const normalizedPem = String(pem || "").replace(/\\n/g, "\n");
+
+  const base64 = normalizedPem
     .replace(/-----BEGIN PUBLIC KEY-----/g, "")
     .replace(/-----END PUBLIC KEY-----/g, "")
     .replace(/\s+/g, "");

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { constants, createPublicKey, privateDecrypt } from "crypto";
+import { constants, createHash, createPublicKey, privateDecrypt } from "crypto";
 import User from "../models/User.js";
 
 const PASSWORD_DIGEST_REGEX = /^[a-f0-9]{64}$/i;
@@ -72,6 +72,8 @@ const getPublicKey = () => {
   }
 };
 
+const hasPrivateKey = () => Boolean(getPrivateKey());
+
 const resolveIncomingPassword = (body) => {
   const passwordDigest = String(body?.passwordDigest || "").trim();
   if (passwordDigest) {
@@ -88,17 +90,17 @@ const resolveIncomingPassword = (body) => {
 const resolveLegacyPlainPassword = (body) => {
   const encryptedPassword = String(body?.passwordEncrypted || "").trim();
   if (!encryptedPassword) {
-    return "";
+    return { plainPassword: "", attempted: false, decryptFailed: false };
   }
 
   const privateKey = getPrivateKey();
   if (!privateKey) {
-    return "";
+    return { plainPassword: "", attempted: true, decryptFailed: true };
   }
 
   try {
     const encryptedBuffer = Buffer.from(encryptedPassword, "base64");
-    return privateDecrypt(
+    const plainPassword = privateDecrypt(
       {
         key: privateKey,
         padding: constants.RSA_PKCS1_OAEP_PADDING,
@@ -106,8 +108,10 @@ const resolveLegacyPlainPassword = (body) => {
       },
       encryptedBuffer
     ).toString("utf8");
+
+    return { plainPassword, attempted: true, decryptFailed: false };
   } catch {
-    return "";
+    return { plainPassword: "", attempted: true, decryptFailed: true };
   }
 };
 
@@ -115,8 +119,8 @@ export const getAuthPublicKey = async (req, res) => {
   try {
     const publicKey = getPublicKey();
 
-    if (!publicKey) {
-      return res.json({ success: false, message: "Auth encryption keys are not configured" });
+    if (!publicKey || !hasPrivateKey()) {
+      return res.json({ success: false, message: "Auth encryption keys are not configured correctly" });
     }
 
     return res.json({ success: true, publicKey });
@@ -194,7 +198,13 @@ export const register = async (req, res) => {
 export const login = async (req, res) => {
   try {
     const { email } = req.body || {};
-    const passwordDigest = resolveIncomingPassword(req.body);
+    const passwordDigestFromPayload = resolveIncomingPassword(req.body);
+    const legacy = resolveLegacyPlainPassword(req.body);
+
+    const passwordDigest = passwordDigestFromPayload ||
+      (legacy.plainPassword
+        ? createHash("sha256").update(legacy.plainPassword).digest("hex")
+        : "");
 
     if (!email || !passwordDigest) {
       return res.json({ success: false, message: "email and passwordDigest are required" });
@@ -217,12 +227,17 @@ export const login = async (req, res) => {
     const matchedDigest = await bcrypt.compare(passwordDigest, user.password);
 
     if (!matchedDigest) {
-      const legacyPlainPassword = resolveLegacyPlainPassword(req.body);
-      const matchedLegacy = legacyPlainPassword
-        ? await bcrypt.compare(legacyPlainPassword, user.password)
+      const matchedLegacy = legacy.plainPassword
+        ? await bcrypt.compare(legacy.plainPassword, user.password)
         : false;
 
       if (!matchedLegacy) {
+        if (legacy.attempted && legacy.decryptFailed) {
+          return res.json({
+            success: false,
+            message: "Auth key mismatch. Please contact support or reset password.",
+          });
+        }
         return res.json({ success: false, message: "Invalid email or password" });
       }
 
