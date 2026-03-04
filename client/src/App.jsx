@@ -17,6 +17,7 @@ import ListShow from './pages/admin/ListShow'
 import ListBooking from './pages/admin/ListBooking'
 import SignIn from './pages/SignIn'
 import SignUp from './pages/SignUp'
+import ResetPassword from './pages/ResetPassword'
 import Payment from './pages/Payment'
 import NotFound from './pages/NotFound'
 import Theaters from './pages/Theaters'
@@ -63,6 +64,7 @@ const App = () => {
       <Route path='/favorite' element={<Favorite/>} />
       <Route path='/signin' element={<SignIn/>} />
       <Route path='/signup' element={<SignUp/>} />
+      <Route path='/reset-password' element={<ResetPassword/>} />
       <Route path='/admin/*' element={<LayOut/>}>
       <Route index element={<Dashboard/>}/>
       <Route path='add-shows' element={<AddShows/>}/>

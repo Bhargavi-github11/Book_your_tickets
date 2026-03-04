@@ -6,7 +6,7 @@ import { dummyShowsData } from "../assets/assets";
 import { encryptPassword } from "../lib/passwordCrypto";
 
 const configuredBaseUrl = import.meta.env.VITE_BASE_URL;
-if (configuredBaseUrl) {
+if (configuredBaseUrl && !import.meta.env.DEV) {
   axios.defaults.baseURL = configuredBaseUrl;
 }
 
@@ -126,7 +126,7 @@ export const AppProvider = ({ children }) => {
     const passwordEncrypted = await getLegacyEncryptedPassword(normalizedPassword);
 
     if (!passwordEncrypted) {
-      throw new Error("Legacy account login needs auth keys on server. Please reset password.");
+      throw new Error("Invalid email or password. Please reset password and try again.");
     }
 
     const legacyPayload = {
@@ -146,19 +146,29 @@ export const AppProvider = ({ children }) => {
     return data.user;
   };
 
-  const resetUserPassword = async ({ email, password, resetCode }) => {
+  const resetUserPassword = async ({ email, password, confirmPassword }) => {
     const normalizedPassword = String(password || "");
-    const passwordDigest = await toSha256Hex(normalizedPassword);
+    const normalizedConfirmPassword = String(confirmPassword || "");
+
+    if (normalizedPassword !== normalizedConfirmPassword) {
+      throw new Error("Incorrect confirm password");
+    }
 
     const { data } = await axios.post("/api/auth/reset-password", {
       email: String(email || "").trim(),
-      passwordDigest,
-      passwordLength: normalizedPassword.length,
-      resetCode: String(resetCode || "").trim(),
+      password: normalizedPassword,
+      confirmPassword: normalizedConfirmPassword,
     });
 
     if (!data.success) {
-      throw new Error(data.message || "Unable to reset password");
+      const serverMessage = String(data.message || "");
+      if (
+        serverMessage.toLowerCase().includes("passworddigest") ||
+        serverMessage.toLowerCase().includes("resetcode")
+      ) {
+        throw new Error("Unable to reset password right now. Please try again.");
+      }
+      throw new Error(serverMessage || "Unable to reset password");
     }
 
     return true;

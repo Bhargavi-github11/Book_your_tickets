@@ -255,30 +255,20 @@ export const login = async (req, res) => {
 
 export const resetPassword = async (req, res) => {
   try {
-    const { email, passwordLength, resetCode } = req.body || {};
-    const passwordDigest = resolveIncomingPassword(req.body);
+    const { email, password, confirmPassword } = req.body || {};
 
-    if (!email || !passwordDigest || !resetCode) {
+    if (!email || !password || !confirmPassword) {
       return res.json({
         success: false,
-        message: "email, passwordDigest and resetCode are required",
+        message: "email, password and confirmPassword are required",
       });
     }
 
-    const configuredResetCode = String(
-      process.env.PASSWORD_RESET_CODE || process.env.ADMIN_SIGNUP_CODE || ""
-    ).trim();
-
-    if (!configuredResetCode) {
-      return res.json({ success: false, message: "Password reset code is not configured" });
+    if (String(password) !== String(confirmPassword)) {
+      return res.json({ success: false, message: "Incorrect confirm password" });
     }
 
-    if (String(resetCode).trim() !== configuredResetCode) {
-      return res.json({ success: false, message: "Invalid reset code" });
-    }
-
-    const normalizedPasswordLength = Number(passwordLength || 0);
-    if (normalizedPasswordLength > 0 && normalizedPasswordLength < 6) {
+    if (String(password).length < 6) {
       return res.json({
         success: false,
         message: "Password must be at least 6 characters",
@@ -292,6 +282,7 @@ export const resetPassword = async (req, res) => {
       return res.json({ success: false, message: "Account not found" });
     }
 
+    const passwordDigest = createHash("sha256").update(String(password)).digest("hex");
     user.password = await bcrypt.hash(passwordDigest, 10);
     await user.save();
 
