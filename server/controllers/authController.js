@@ -1,6 +1,5 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { constants, privateDecrypt } from "crypto";
 import User from "../models/User.js";
 
 const signToken = (user) =>
@@ -18,65 +17,9 @@ const safeUser = (user) => ({
   image: user.image || "",
 });
 
-const normalizePemKey = (value) => String(value || "").replace(/\\n/g, "\n").trim();
-
-const isProduction = () => String(process.env.NODE_ENV || "").toLowerCase() === "production";
-
-const isAuthEncryptionConfigured = () =>
-  Boolean(normalizePemKey(process.env.AUTH_PUBLIC_KEY) && normalizePemKey(process.env.AUTH_PRIVATE_KEY));
-
-const decryptIncomingPassword = (passwordEncrypted) => {
-  const privateKey = normalizePemKey(process.env.AUTH_PRIVATE_KEY);
-
-  if (!privateKey) {
-    throw new Error("Password encryption is enabled on client but AUTH_PRIVATE_KEY is missing");
-  }
-
-  const encryptedBuffer = Buffer.from(String(passwordEncrypted || ""), "base64");
-
-  return privateDecrypt(
-    {
-      key: privateKey,
-      padding: constants.RSA_PKCS1_OAEP_PADDING,
-      oaepHash: "sha256",
-    },
-    encryptedBuffer
-  ).toString("utf8");
-};
-
-const resolvePassword = (body) => {
-  const plainPassword = String(body?.password || "");
-  if (plainPassword) {
-    if (isProduction() || isAuthEncryptionConfigured()) {
-      throw new Error("Plain password payload is disabled. Use encrypted password payload.");
-    }
-    return plainPassword;
-  }
-
-  const encryptedPassword = String(body?.passwordEncrypted || "");
-  if (!encryptedPassword) return "";
-
-  return decryptIncomingPassword(encryptedPassword);
-};
-
-export const getAuthPublicKey = async (req, res) => {
-  try {
-    const publicKey = normalizePemKey(process.env.AUTH_PUBLIC_KEY);
-
-    if (!publicKey) {
-      return res.json({ success: false, message: "AUTH_PUBLIC_KEY is not configured" });
-    }
-
-    return res.json({ success: true, publicKey });
-  } catch (error) {
-    return res.json({ success: false, message: error.message });
-  }
-};
-
 export const register = async (req, res) => {
   try {
-    const { name, email } = req.body || {};
-    const password = resolvePassword(req.body);
+    const { name, email, password } = req.body || {};
 
     if (!name || !email || !password) {
       return res.json({
@@ -140,8 +83,7 @@ export const register = async (req, res) => {
 
 export const login = async (req, res) => {
   try {
-    const { email } = req.body || {};
-    const password = resolvePassword(req.body);
+    const { email, password } = req.body || {};
 
     if (!email || !password) {
       return res.json({ success: false, message: "email and password are required" });
